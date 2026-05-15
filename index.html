@@ -592,11 +592,9 @@ async function startDrake(){
 
     log("Loading wake model...");
 
-    model =
-      await Vosk.createModel(
-        "model.tar.gz"
-      );
-
+model = await Vosk.createModel(
+  "https://himnishisop.github.io/drake1/model.tar.gz"
+);
   }
 
   recognizer =
