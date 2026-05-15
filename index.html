@@ -380,7 +380,7 @@ async function startDrake(){
   if(!model){
     log("Loading wake model...");
     const startTime = Date.now();
-   model = await Vosk.createModel(
+model = await Vosk.createModel(
   "https://himnishisop.github.io/drake1/model.tar.gz"
     log("Wake model loaded in " + Math.round((Date.now() - startTime) / 1000) + " sec ✅");
   }
