@@ -256,55 +256,53 @@ async function onConnectionSuccess(){
 
 async function onTrackAdded(track){
   if(track.isLocal()) return;
+  if(track.getType() !== "audio") return;
 
-  if(track.getType() === "audio"){
-    log("New remote audio track received ✅");
+  log("New remote audio track received ✅");
 
-    autoRestartWake = running;
+  autoRestartWake = running;
 
-    await stopWakeOnly();
+  await stopWakeOnly();
 
-    remoteAudioEls.forEach(el => {
-      try{
-        el.pause();
-        el.srcObject = null;
-        el.remove();
-      }catch(e){}
-    });
+  // remove old hidden audio sinks
+  remoteAudioEls.forEach(el => {
+    try{
+      track.detach(el);
+      el.pause();
+      el.srcObject = null;
+      el.remove();
+    }catch(e){}
+  });
 
-    remoteAudioEls = [];
+  remoteAudioEls = [];
 
-    const audio = document.createElement("audio");
-    audio.autoplay = true;
-    audio.controls = true;
-    audio.playsInline = true;
-    audio.style.width = "100%";
+  // hidden audio only, no UI controls
+  const audio = document.createElement("audio");
+  audio.autoplay = true;
+  audio.playsInline = true;
+  audio.muted = true;
+  audio.style.display = "none";
 
-    document.body.appendChild(audio);
-    remoteAudioEls.push(audio);
+  document.body.appendChild(audio);
+  remoteAudioEls.push(audio);
 
-    track.attach(audio);
+  track.attach(audio);
 
-    audio.play().catch(e => {
-      log("Audio play warning: " + e);
-    });
+  if(typeof track.getOriginalStream === "function"){
+    remoteAudioStream = track.getOriginalStream();
+  }else{
+    remoteAudioStream = new MediaStream([track.getTrack()]);
+  }
 
-    if(typeof track.getOriginalStream === "function"){
-      remoteAudioStream = track.getOriginalStream();
-    }else{
-      remoteAudioStream = new MediaStream([track.getTrack()]);
-    }
+  log("Second phone mic captured ✅");
+  setStatus("remote audio ready");
 
-    log("Second phone mic captured ✅");
-    setStatus("remote audio ready");
-
-    if(autoRestartWake){
-      autoRestartWake = false;
-      setTimeout(() => {
-        log("Restarting wake listener on NEW audio track...");
-        startDrake();
-      }, 1000);
-    }
+  if(autoRestartWake){
+    autoRestartWake = false;
+    setTimeout(() => {
+      log("Restarting wake listener on newest mic...");
+      startDrake();
+    }, 1000);
   }
 }
 
