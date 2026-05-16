@@ -416,57 +416,66 @@ async function onConnectionSuccess(){
 
 }
 
-function onTrackAdded(track){
+async function onTrackAdded(track){
 
   if(track.isLocal()) return;
+  if(track.getType() !== "audio") return;
 
-  if(track.getType() === "audio"){
+  log("New remote audio track received ✅");
 
-    const audio =
-      document.createElement("audio");
+  autoRestartWake = running;
 
-    audio.autoplay = true;
-    audio.controls = true;
+  await stopWakeOnly();
 
-    document.body.appendChild(audio);
+  // destroy ALL old audio tags
+  document.querySelectorAll("audio").forEach(a=>{
+    try{
+      a.pause();
+      a.srcObject = null;
+      a.remove();
+    }catch(e){}
+  });
 
-    track.attach(audio);
+  remoteAudioEls = [];
 
-    audio.play();
+  // hidden sink
+  const audio = document.createElement("audio");
 
-    if(typeof track.getOriginalStream === "function"){
+  audio.autoplay = true;
+  audio.playsInline = true;
+  audio.muted = true;
 
-      remoteAudioStream =
-        track.getOriginalStream();
+  // HARD HIDE
+  audio.style.position = "fixed";
+  audio.style.left = "-99999px";
+  audio.style.width = "1px";
+  audio.style.height = "1px";
+  audio.style.opacity = "0";
+  audio.controls = false;
 
-    }else{
+  document.body.appendChild(audio);
 
-      remoteAudioStream =
-        new MediaStream([track.getTrack()]);
+  remoteAudioEls.push(audio);
 
-    }
+  track.attach(audio);
 
-    log("Second phone mic captured ✅");
-
-    setStatus("remote audio ready");
-
+  if(typeof track.getOriginalStream === "function"){
+    remoteAudioStream = track.getOriginalStream();
+  }else{
+    remoteAudioStream = new MediaStream([track.getTrack()]);
   }
 
+  log("Second phone mic captured ✅");
+
+  if(autoRestartWake){
+    autoRestartWake = false;
+
+    setTimeout(()=>{
+      log("Restarting Drake listener...");
+      startDrake();
+    },1000);
+  }
 }
-
-/* ================= TTS INJECTION ================= */
-
-async function setupSilentTTSInjection(){
-
-  if(!localAudioTrack){
-
-    setTimeout(
-      setupSilentTTSInjection,
-      500
-    );
-
-    return;
-  }
 
   ttsCtx =
     new AudioContext();
